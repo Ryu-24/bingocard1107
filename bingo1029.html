@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ビンゴ司会システム</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+        }
+        #number {
+            color: blue;
+            font-size: 48px;
+            margin: 20px;
+        }
+        #history {
+            margin-top: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .history-column {
+            margin: 0 10px;
+        }
+        .history-item {
+            margin: 5px 0;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+        }
+        table {
+            margin: 10px;
+            border-collapse: collapse;
+        }
+        td {
+            width: 30px;
+            height: 30px;
+            border: 1px solid #000;
+            text-align: center;
+            vertical-align: middle;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .selected {
+            background-color: yellow;
+        }
+        .bingo-card {
+            display: inline-block;
+            margin: 10px;
+        }
+        .card-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 10px;
+        }
+        .card-number {
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+        #cardsContainer {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        #newCardContainer {
+            margin-bottom: 30px;
+        }
+    </style>
+</head>
+<body>
+    <h1>ビンゴゲーム</h1>
+    <button onclick="generateNumber()">抽選</button>
+    <div id="number">--</div>
+    <h2>出た番号</h2>
+    <div id="history"></div>
+    <div id ="card"></div>
+
+
+    <h1>ビンゴカード</h1>
+    <button onclick="generateNewCard()">新しいカードを生成</button>
+    <div id="newCardContainer"></div>
+    <div id="cardsContainer"></div>
+
+    <script>
+        let numbers = [];
+        let history = [];
+
+        function generateNumber() {
+            if (numbers.length >= 75) {
+                alert("ビンゴ出来たかなー？");
+                return;
+            }
+
+            let num;
+            do {
+                num = Math.floor(Math.random() * 75) + 1;
+            } while (numbers.includes(num));
+
+            numbers.push(num);
+            history.push(num);
+
+            document.getElementById("number").innerText = num;
+            updateHistory();
+        }
+
+        function updateHistory() {
+            const historyDiv = document.getElementById("history");
+            historyDiv.innerHTML = "";
+
+            let column;
+            history.forEach((num, index) => {
+                if (index % 10 === 0) {
+                    column = document.createElement("div");
+                    column.className = "history-column";
+                    historyDiv.appendChild(column);
+                }
+                const div = document.createElement("div");
+                div.className = "history-item";
+                div.innerText = num;
+                column.appendChild(div);
+            });
+        }   //ビンゴ番号終わり
+
+        ///ビンゴカード始まり
+        let previousCard = null;
+        let cardCount = 0;
+
+        function generateBingoNumbers() {
+            const columns = [[], [], [], [], []];
+            for (let i = 0; i < 5; i++) {
+                const start = i * 15 + 1;
+                const end = start + 15;
+                const columnNumbers = [];
+                while (columnNumbers.length < 5) {
+                    const num = Math.floor(Math.random() * 15) + start;
+                    if (!columnNumbers.includes(num)) {
+                        columnNumbers.push(num);
+                    }
+                }
+                columns[i] = columnNumbers;
+            }
+            columns[2][2] = 'FREE'; // 中央のフリースペース
+            return columns;
+        }
+
+        function createBingoCard() {
+            const table = document.createElement('table');
+            table.className = 'bingo-card';
+            const numbers = generateBingoNumbers();
+
+            for (let i = 0; i < 5; i++) {
+                const row = document.createElement('tr');
+                for (let j = 0; j < 5; j++) {
+                    const cell = document.createElement('td');
+                    cell.innerText = numbers[j][i];
+                    cell.addEventListener('click', () => selectNumber(cell, numbers[j][i]));
+                    row.appendChild(cell);
+                }
+                table.appendChild(row);
+            }
+            return table;
+        }
+
+    function selectNumber(cell, number) {
+    if (number === 'FREE' || cell.classList.contains('selected')) return;
+    cell.classList.toggle('selected');
+    checkBingo(); // セル選択時にビンゴ判定を行う
+    }
+
+        function generateNewCard() {
+            const newCardContainer = document.getElementById('newCardContainer');
+            const cardsContainer = document.getElementById('cardsContainer');
+            const newCard = createBingoCard();
+
+            if (previousCard) {
+                const cardWrapper = document.createElement('div');
+                cardWrapper.className = 'card-wrapper';
+
+                const cardNumber = document.createElement('div');
+                cardNumber.className = 'card-number';
+                cardNumber.innerText = `カード ${++cardCount}`;
+                cardWrapper.appendChild(cardNumber);
+
+                cardWrapper.appendChild(previousCard);
+                cardsContainer.appendChild(cardWrapper);
+            }
+
+            newCardContainer.innerHTML = '';
+            newCardContainer.appendChild(newCard);
+            previousCard = newCard.cloneNode(true);
+
+            //リーチビンゴ判定
+            const status = document.createElement('div');
+            status.className = 'status';
+            status.id = `status-${cardCount}`;
+            newCardContainer.appendChild(status);
+        }
+
+
+
+    function checkBingo() {
+    const rows = document.querySelectorAll('.bingo-card tr');
+    const cols = [[], [], [], [], []];
+    let diagonal1 = [];
+    let diagonal2 = [];
+    let bingoCount = 0;
+    let reachCount = 0;
+
+    for (let i = 0; i < 5; i++) {
+        let rowSelected = true;
+        let rowReach = 0;
+        for (let j = 0; j < 5; j++) {
+            const cell = rows[i].children[j];
+            if (!cell.classList.contains('selected') && cell.innerText !== 'FREE') {
+                rowSelected = false;
+            } else {
+                rowReach++;
+            }
+            cols[j].push(cell);
+        }
+        if (rowSelected) {
+            bingoCount++;
+        } else if (rowReach === 4) {
+            reachCount++;
+        }
+    }
+
+    for (let i = 0; i < 5; i++) {
+        let colSelected = true;
+        let colReach = 0;
+        for (let j = 0; j < 5; j++) {
+            const cell = cols[i][j];
+            if (!cell.classList.contains('selected') && cell.innerText !== 'FREE') {
+                colSelected = false;
+            } else {
+                colReach++;
+            }
+        }
+        if (colSelected) {
+            bingoCount++;
+        } else if (colReach === 4) {
+            reachCount++;
+        }
+    }
+
+    for (let i = 0; i < 5; i++) {
+        if (rows[i].children[i].classList.contains('selected') || rows[i].children[i].innerText === 'FREE') {
+            diagonal1.push(rows[i].children[i]);
+        }
+        if (rows[i].children[4 - i].classList.contains('selected') || rows[i].children[4 - i].innerText === 'FREE') {
+            diagonal2.push(rows[i].children[4 - i]);
+        }
+    }
+
+    if (diagonal1.length === 5) {
+        bingoCount++;
+    } else if (diagonal1.length === 4) {
+        reachCount++;
+    }
+
+    if (diagonal2.length === 5) {
+        bingoCount++;
+    } else if (diagonal2.length === 4) {
+        reachCount++;
+    }
+
+    const status = document.getElementById(`status-${cardCount}`);
+    if (bingoCount >= 3) {
+        status.innerText = 'トリプルビンゴ！';
+    } else if (bingoCount === 2) {
+        status.innerText = 'ダブルビンゴ！';
+    } else if (bingoCount === 1) {
+        status.innerText = 'ビンゴ！';
+    } else if (reachCount >= 3) {
+        status.innerText = 'トリプルリーチ！';
+    } else if (reachCount === 2) {
+        status.innerText = 'ダブルリーチ！';
+    } else if (reachCount === 1) {
+        status.innerText = 'リーチ！';
+    } else {
+        status.innerText = '';
+    }
+
+    }
+
+    </script>
+</body>
+</html>
